@@ -1,0 +1,21 @@
+body{
+    background-color: #FFBF00;
+}
+input{
+    width: 150px;
+    font-size: 20px;
+}
+select{
+    width: auto;
+    font-size: 20px;
+}
+#fieldsetCaja{
+    width: 300px;
+    margin: auto;
+    font-weight: bold;
+    font-size: 17px;
+    background-color: #F7FE2E;
+}
+#caja{
+    font-size: 20px;
+}

@@ -29,8 +29,9 @@ class DaoOperaciones {
 
         $todo_bien = true;
         $conexion->autocommit(false);
-        $sql = "INSERT INTO estanteria VALUES(null, '$codigo', $numLejas, '$idPasillo', $numero,0)";
-        $conexion->query($sql);
+        $sql = $conexion->prepare("INSERT INTO estanteria VALUES(null,?,?,?,?,0)");
+        $sql->bind_param("siii", $codigo, $numLejas, $idPasillo, $numero);
+        $sql->execute();
 
         if ($conexion->affected_rows > 0) {
             $todo_bien = true;
@@ -38,6 +39,7 @@ class DaoOperaciones {
             $todo_bien = false;
             return $idMensaje = $conexion->errno . $conexion->error;
         }
+        $sql->close();
 
         $sql = "UPDATE pasillo SET huecosOcupados=huecosOcupados+1 WHERE id='$idPasillo'";
         $conexion->query($sql);
@@ -69,7 +71,7 @@ class DaoOperaciones {
             $objetos = array();
 
             while ($ArrayEstanterias) {
-            //Creo el array $objetos para guardar en él los objetos creados
+                //Creo el array $objetos para guardar en él los objetos creados
                 $objetos[] = $ArrayEstanterias;
                 $ArrayEstanterias = $resultado->fetch_object();
             }
@@ -81,6 +83,11 @@ class DaoOperaciones {
 
         global $conexion;
 
+        /* Para sacar las estanterias libres tendremos que sacar el pasillo de la tabla pasillo
+         * ya que en estanteria solo tenemos el id del pasillo, de ahí a que a la hora 
+         * de sacar las estanterias libres se necesite unir dos tablas, estanteria y pasillo,
+         * y usamos un fetch_object para guardar los datos que nos devuelve la consulta.
+         */
         $sql = "SELECT e.id,e.codigoEstanteria,e.numLejas,e.numero,e.numLejasOcupadas,p.pasillo FROM estanteria as e, pasillo as p WHERE e.numLejasOcupadas<e.numlejas AND e.idPasillo=p.id";
         $resultado = $conexion->query($sql);
 
@@ -105,9 +112,9 @@ class DaoOperaciones {
         $resultado = $conexion->query($sql);
 
         if ($resultado > 0) {
-        //creamos un vector vacío de lejas
+            //creamos un vector vacío de lejas
             $fila = $resultado->fetch_array();
-        //introducimos cada leja en el nuevo vector y devolvemos el vector
+            //introducimos cada leja en el nuevo vector y devolvemos el vector
             for ($i = 1; $i < $fila['numLejas'] + 1; $i++) {
                 array_push($lejas, $i);
             }
@@ -180,16 +187,16 @@ class DaoOperaciones {
     public function crearArrayLugares($_idPasillo) {
 
         global $conexion;
-//seleccionamos el numero de huecos DISPONIBLES en el pasillo seleccionado
+        //seleccionamos el numero de huecos DISPONIBLES en el pasillo seleccionado
         $huecosLibres = array();
-//creamos un vector vacío de huecos vacios dentro del pasillo
+        //creamos un vector vacío de huecos vacios dentro del pasillo
 
         $sql = "SELECT huecosDisponibles FROM pasillo WHERE id='$_idPasillo'";
         $resultado = $conexion->query($sql);
         if ($resultado > 0) {
 
             $fila = $resultado->fetch_array();
-//introducimos cada hueco en el nuevo vector y devolvemos el vector
+            //introducimos cada hueco en el nuevo vector y devolvemos el vector
             for ($i = 1; $i < $fila['huecosDisponibles'] + 1; $i++) {
                 array_push($huecosLibres, $i);
             }
@@ -242,9 +249,12 @@ class DaoOperaciones {
         $idEstanteria = $_ocupacion->getIdEstanteria();
         $numLejas = $_ocupacion->getNumLeja();
 
-
-        $sql = "INSERT INTO caja VALUES(null,'$codigo','$contenido',$alto,$ancho,$profundidad,'$material','$color')";
-        $resultado = $conexion->query($sql);
+        //hacemos sentencias preparadas ya que los valores provienen de un formulario
+        $sql = $conexion->prepare("INSERT INTO caja VALUES(null,?,?,?,?,?,?,?)");
+        //indicamos de que tipo son los parametros que vamos a insertar
+        $sql->bind_param("ssiiiss", $codigo, $contenido, $alto, $ancho, $profundidad, $material, $color);
+        $sql->execute();
+        $sql->close();
         if ($conexion->affected_rows > 0) {
             $mensaje = ($conexion->affected_rows);
             //return $mensaje;
@@ -259,6 +269,7 @@ class DaoOperaciones {
 
         $id = $conexion->insert_id;
 
+        //No sería necesario hacer una sentencia preparada ya que los datos provienen directamente de la BDD
         $sql = "INSERT INTO ocupacion VALUES(null,$id,$idEstanteria,$numLejas)";
         $resultado = $conexion->query($sql);
         if ($conexion->affected_rows > 0) {
@@ -322,8 +333,8 @@ class DaoOperaciones {
 
         global $conexion;
 
-        $orden = "SELECT e.codigoEstanteria,p.pasillo,e.numero,o.numLeja,c.codigoCaja,c.alto,c.ancho,c.profundidad,c.color,c.material,c.contenido FROM caja as c,estanteria as e,pasillo as p,ocupacion as o WHERE e.idPasillo=p.id AND c.id=o.idCaja AND e.id=o.idEstanteria ORDER BY p.pasillo,e.numero";
-        $resultado = $conexion->query($orden);
+        $sql = "SELECT e.codigoEstanteria,p.pasillo,e.numero,o.numLeja,c.codigoCaja,c.alto,c.ancho,c.profundidad,c.color,c.material,c.contenido FROM caja as c,estanteria as e,pasillo as p,ocupacion as o WHERE e.idPasillo=p.id AND c.id=o.idCaja AND e.id=o.idEstanteria ORDER BY p.pasillo,e.numero";
+        $resultado = $conexion->query($sql);
 
         if ($resultado->num_rows > 0) {
             $objetos = array();
@@ -337,11 +348,45 @@ class DaoOperaciones {
         return $objetos;
     }
 
-    public function venderCaja($_codigoCaja){
-        
+    public function sacarInformacionCaja($_codigoCaja) {
+
         global $conexion;
-        
-        $orden = "DELETE * FROM caja WHERE codigoCaja='".$_codigoCaja."'";
-        $resultado = $conexion->query($orden);
+
+        $sql = "SELECT * FROM caja WHERE codigoCaja='" . $_codigoCaja . "'";
+        $resultado = $conexion->query($sql);
+        if ($conexion->affected_rows > 0) {
+            $objetos = array();
+            $ArrayCajas = $resultado->fetch_assoc();
+
+            while ($ArrayCajas) {
+                $codigo = $ArrayCajas['codigoCaja'];
+                $contenido = $ArrayCajas['contenido'];
+                $alto = $ArrayCajas['alto'];
+                $ancho = $ArrayCajas['ancho'];
+                $profundidad = $ArrayCajas['profundidad'];
+                $material = $ArrayCajas['material'];
+                $color = $ArrayCajas['color'];
+
+                $caja = new Caja($codigo, $contenido, $alto, $ancho, $profundidad, $material, $color);
+                $objetos[] = $caja;
+                $ArrayCajas = $resultado->fetch_assoc();
+            }
+        }
+        return $objetos;
     }
+
+    public function venderCaja($_codigoCaja) {
+
+        global $conexion;
+
+        $sql = "DELETE FROM caja WHERE codigoCaja='" . $_codigoCaja . "'";
+        $resultado = $conexion->query($sql);
+        if ($conexion->affected_rows > 0) {
+            $sql = "UPDATE estanteria SET numLejasOcupadas=numLejasOcupadas-1";
+            return $mensaje = "BORRADO CORRECTAMENTE";
+        } else {
+            return $mensaje = "ERROR AL BORRAR";
+        }
+    }
+
 }

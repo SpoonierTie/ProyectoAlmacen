@@ -32,7 +32,7 @@ and open the template in the editor.
                     <li class="submenu">
                         <a href="#">Almacén</a>
                         <ul class="children">
-                            <li><a href="Controlador/ControladorVentaCaja.php">Venta Caja</a></li>
+                            <li><a href="Vista/VistaVentaCaja.php">Venta Caja</a></li>
                             <li><a href="#">Devolver Caja</a></li>
                             <li><a href="Controlador/ControladorListarInventario.php">Inventario</a></li>
                         </ul>

@@ -2,14 +2,11 @@
 include "../DAO/DaoOperaciones.php";
 session_start();
 
-$codigoCaja = $_REQUEST['codigoCaja'];
+$codigoCaja = $_SESSION['codigoCaja'];
 
-$ArrayCajas = DaoOperaciones::sacarInformacionCaja($codigoCaja);
+$mensaje = DaoOperaciones::venderCaja($codigoCaja);
 
-$_SESSION['codigoCaja'] = $codigoCaja;
-$_SESSION['caja'] = $ArrayCajas;
-header("Location:../Vista/VistaInfoVentaCaja.php");
-
+header("Location:../Vista/VistaMensajesError.php?mensaje=$mensaje");
 /* 
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
